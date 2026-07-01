@@ -1,0 +1,19 @@
+{
+  "need_detection": {
+    "working_capital": 0.9998962547982156,
+    "machinery_capex": 0.8938835666912307,
+    "business_expansion": 1.0,
+    "inventory_funding": 0.9099099099099099,
+    "trade_finance": 0.9999999999999999,
+    "digital_transformation": 0.981074481074481
+  },
+  "credit_risk": {
+    "auc": 0.9686857142857144,
+    "gini": 0.9373714285714287,
+    "avg_precision": 0.8616624060150377
+  },
+  "product_ranking": {
+    "ndcg_at_3": 0.8750191828223229,
+    "n_queries_eval": 200
+  }
+}
