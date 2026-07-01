@@ -188,11 +188,5 @@ Key endpoints:
 - `PATCH /api/v1/products/recommendations/{id}/status` — Update recommendation lifecycle
 
 ---
-
-## Team
-
-Built for **IDBI Innovate Hackathon 2026 — Track 3**
-
+ss
 ---
-
-*Detect · Match · Outreach · Lend*
