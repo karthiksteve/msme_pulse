@@ -29,7 +29,18 @@ class Settings(BaseSettings):
     
     # Feature Store
     FEAST_REPO_PATH: str = os.getenv("FEAST_REPO_PATH", "/app/feature_store")
-    
+
+    # LLM Services
+    LM_STUDIO_ENABLED: bool = os.getenv("LM_STUDIO_ENABLED", "true").lower() == "true"
+    LM_STUDIO_BASE_URL: str = os.getenv("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
+    LM_STUDIO_MODEL: str = os.getenv("LM_STUDIO_MODEL", "qwen2.5-7b-instruct")
+    LM_STUDIO_TIMEOUT_SECONDS: float = float(os.getenv("LM_STUDIO_TIMEOUT_SECONDS", "45"))
+    LM_STUDIO_MAX_RETRIES: int = int(os.getenv("LM_STUDIO_MAX_RETRIES", "1"))
+
+    # Google Gemini API
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
     class Config:
         env_file = ".env"
         case_sensitive = True

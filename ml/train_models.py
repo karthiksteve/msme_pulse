@@ -43,11 +43,14 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 DEFAULT_DATA_PATH = PROJECT_ROOT / "synthetic_data" / "feature_matrix.parquet"
 DEFAULT_MODEL_DIR = PROJECT_ROOT / "backend" / "models"
 
-# 20 feature columns in exact order matching ml_service._prepare_features()
+# 23 feature columns in exact order matching ml_service._prepare_features()
 FEATURE_COLS = [
     "incorporation_age",
     "is_private_limited",
     "employee_count",
+    "pf_compliance_score",
+    "gstr_3b_delay_days",
+    "disposable_income_norm",
     "total_revenue_norm",
     "gst_liability_norm",
     "itc_available_norm",

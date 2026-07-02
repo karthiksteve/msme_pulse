@@ -102,6 +102,13 @@ async def seed_database(drop_tables: bool = False):
                 constitution=m.get("constitution"),
                 status=MSMEStatus(m["status"]),
                 gst_registration_date=parse_date(m.get("gst_registration_date")),
+                epfo_active_employees=int(m.get("epfo_active_employees", 0)),
+                pf_compliance_score=float(m.get("pf_compliance_score", 0.0)),
+                avg_monthly_inflow=float(m.get("avg_monthly_inflow", 0.0)),
+                avg_monthly_outflow=float(m.get("avg_monthly_outflow", 0.0)),
+                disposable_income=float(m.get("disposable_income", 0.0)),
+                gstr_3b_delay_days=int(m.get("gstr_3b_delay_days", 0)),
+                behavioral_tag=m.get("behavioral_tag", ""),
                 created_at=parse_date(m.get("created_at")),
                 updated_at=parse_date(m.get("updated_at")),
             )

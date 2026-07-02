@@ -57,6 +57,15 @@ class MSME(Base):
     status = Column(SQLEnum(MSMEStatus), default=MSMEStatus.ACTIVE, index=True)
     gst_registration_date = Column(DateTime)
     
+    # Alternate Data Signals (EPFO, AA, GST discipline)
+    epfo_active_employees = Column(Integer, default=0)
+    pf_compliance_score = Column(Float, default=0.0)
+    avg_monthly_inflow = Column(Float, default=0.0)
+    avg_monthly_outflow = Column(Float, default=0.0)
+    disposable_income = Column(Float, default=0.0)
+    gstr_3b_delay_days = Column(Integer, default=0)
+    behavioral_tag = Column(String(255), default="")
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

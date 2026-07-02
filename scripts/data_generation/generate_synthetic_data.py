@@ -327,6 +327,27 @@ def generate_msmes(n: int, rng: random.Random, faker: Faker) -> list[dict[str, A
         employees = max(1, int(np.random.exponential(scale=15)))
         employees = min(employees, 500)
 
+        # Generate alternate data details (EPFO, cash flow, delay days)
+        if status == "active":
+            pf_compliance = round(rng.uniform(82.0, 100.0), 1)
+            gstr_delay = rng.choice([0, 0, 0, 1, 2, 3, 5, 8])
+            burn_ratio = rng.uniform(0.70, 0.88)
+        else:
+            pf_compliance = round(rng.uniform(35.0, 80.0), 1)
+            gstr_delay = rng.randint(6, 45)
+            burn_ratio = rng.uniform(0.88, 1.05)
+
+        avg_inflow = round((nic["rev_base"] / 12) * rng.uniform(0.85, 1.25), 2)
+        avg_outflow = round(avg_inflow * burn_ratio, 2)
+        disposable_inc = round(avg_inflow - avg_outflow, 2)
+
+        if disposable_inc > 0.20 * avg_inflow:
+            behavior_tag = "Disciplined Spender"
+        elif avg_outflow > 0.90 * avg_inflow:
+            behavior_tag = "High Cash Burn"
+        else:
+            behavior_tag = "Moderate Spender"
+
         msme_id = str(uuid.uuid4())
         city = faker.city()
 
@@ -348,6 +369,13 @@ def generate_msmes(n: int, rng: random.Random, faker: Faker) -> list[dict[str, A
             "constitution": constitution,
             "status": status,
             "gst_registration_date": gst_registration_date.isoformat(),
+            "epfo_active_employees": employees,
+            "pf_compliance_score": pf_compliance,
+            "avg_monthly_inflow": avg_inflow,
+            "avg_monthly_outflow": avg_outflow,
+            "disposable_income": disposable_inc,
+            "gstr_3b_delay_days": gstr_delay,
+            "behavioral_tag": behavior_tag,
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat(),
             # Internal metadata for data generation (not in DB schema)
@@ -762,6 +790,9 @@ def build_feature_matrix(
         incorporation_age = msme["_years_old"]
         is_pvt_ltd = 1.0 if msme["constitution"] == "Private Limited" else 0.0
         employee_count = float(msme["_employee_count"])
+        pf_compliance = float(msme.get("pf_compliance_score", 0.0))
+        gstr_delay = float(msme.get("gstr_3b_delay_days", 0))
+        disposable_inc_norm = float(msme.get("disposable_income", 0.0)) / 1e6
 
         # ── GST features ──────────────────────────────────────────────────
         if gst_list:
@@ -858,6 +889,9 @@ def build_feature_matrix(
             "incorporation_age": float(incorporation_age),
             "is_private_limited": is_pvt_ltd,
             "employee_count": employee_count,
+            "pf_compliance_score": pf_compliance,
+            "gstr_3b_delay_days": gstr_delay,
+            "disposable_income_norm": disposable_inc_norm,
             "total_revenue_norm": float(total_revenue) / 1e7,
             "gst_liability_norm": float(gst_liability) / 1e6,
             "itc_available_norm": float(itc_available) / 1e6,

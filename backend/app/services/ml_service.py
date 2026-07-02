@@ -47,7 +47,17 @@ class MLModelService:
 
         features.append(float(msme_data.get("incorporation_year", 2020)) - 2000)
         features.append(1.0 if msme_data.get("constitution") == "Private Limited" else 0.0)
-        features.append(float(msme_data.get("employee_count", 10)))
+        
+        # Use epfo_active_employees if available, otherwise fallback to employee_count
+        emp_count = msme_data.get("epfo_active_employees")
+        if emp_count is None:
+            emp_count = msme_data.get("employee_count", 10)
+        features.append(float(emp_count))
+        
+        # New alternate data features
+        features.append(float(msme_data.get("pf_compliance_score", 0.0)))
+        features.append(float(msme_data.get("gstr_3b_delay_days", 0.0)))
+        features.append(float(msme_data.get("disposable_income", 0.0)) / 1e6)
 
         if gst_data:
             latest_gst = gst_data[0]

@@ -66,6 +66,9 @@ interface XAIResponse {
   strengths: string[]
   sub_scores: Record<string, number>
   sub_score_labels: Record<string, string>
+  repayment_capacity?: number
+  repayment_capacity_label?: string
+  narrative_source?: string
   data_completeness_pct: number
   data_sources_used: string[]
   as_of_date: string
@@ -126,11 +129,11 @@ const PRODUCT_TYPE_COLORS: Record<string, string> = {
   digital_business_loan: 'linear-gradient(135deg, #a855f7, #9333ea)',
 }
 
-function fmtINR(v: number): string {
-  if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`
-  if (v >= 1e5) return `₹${(v / 1e5).toFixed(1)} L`
-  return `₹${v.toLocaleString('en-IN')}`
-}
+// function fmtINR(v: number): string {
+//   if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)} Cr`
+//   if (v >= 1e5) return `₹${(v / 1e5).toFixed(1)} L`
+//   return `₹${v.toLocaleString('en-IN')}`
+// }
 
 function fmtEMI(v: number): string {
   if (v >= 1e5) return `₹${(v / 1e5).toFixed(1)}L/mo`
@@ -285,7 +288,7 @@ function SubScoreRadar({ subScores, labels }: { subScores: Record<string, number
         </text>
       ))}
       {/* Score values */}
-      {points.map((p, i) => {
+      {points.map((_, i) => {
         const angle = (i / n) * 2 * Math.PI - Math.PI / 2
         const vx = cx + ((subScores[keys[i]] / 100) * r * 0.5) * Math.cos(angle)
         const vy = cy + ((subScores[keys[i]] / 100) * r * 0.5) * Math.sin(angle)
@@ -563,6 +566,18 @@ export function LoanEligibilityPage() {
                     Based on GST turnover × eligibility score multiplier
                   </div>
                 </div>
+                {result.repayment_capacity_label && (
+                  <div style={{
+                    padding: '14px 16px', borderRadius: 12,
+                    background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)'
+                  }}>
+                    <div style={{ fontSize: 11, color: '#22d3ee', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Max Monthly EMI Capacity</div>
+                    <div style={{ fontSize: 26, fontWeight: 700, color: '#06b6d4' }}>{result.repayment_capacity_label}/mo</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      Calculated from disposable income (Alternate Cash Flow)
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Progress bar */}
@@ -642,6 +657,15 @@ export function LoanEligibilityPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <FileText size={16} color="#6366f1" />
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Executive Summary</span>
+                {result.narrative_source && (
+                  <span style={{
+                    marginLeft: 'auto', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                    background: result.narrative_source.startsWith('llm') || result.narrative_source.includes('gemini') ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)',
+                    color: result.narrative_source.startsWith('llm') || result.narrative_source.includes('gemini') ? '#10b981' : '#6366f1'
+                  }}>
+                    Source: {result.narrative_source.toUpperCase().replace('_', ' ')}
+                  </span>
+                )}
               </div>
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}
                 dangerouslySetInnerHTML={{ __html: result.executive_summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}

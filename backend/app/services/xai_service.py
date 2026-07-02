@@ -19,6 +19,7 @@ Composite Eligibility Score = weighted average of sub-scores
 from __future__ import annotations
 
 import math
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
@@ -29,6 +30,9 @@ from app.schemas import (
     ScoreSlabRow,
     FeatureContribution,
 )
+from app.services.llm_service import llm_explainer_service, LLMUnavailableError, LLMResponseParseError
+
+logger = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -701,7 +705,7 @@ class XAILoanService:
     product suggestion logic for MSME loan eligibility.
     """
 
-    def compute_loan_explanation(
+    async def compute_loan_explanation(
         self,
         msme_data: Dict[str, Any],
         gst_data: List[Dict],
@@ -806,9 +810,41 @@ class XAILoanService:
         score_slab = _build_score_slab(all_meta, sub_scores)
         feature_contributions = _build_feature_contributions(sub_scores, all_meta)
         areas_of_improvement, strengths = _build_improvement_areas(sub_scores, all_meta, rep_meta)
-        summary, breakdown, risk = _generate_narratives(
-            msme_data, eligibility_score, band, sub_scores, rep_meta, rev_meta, computed_max, asking_amount
-        )
+
+        # ── Step 8: LLM Narrative Generation (Fail-Open to Templates) ─────────
+        narrative_src = "template"
+        try:
+            llm_res = await llm_explainer_service.generate_xai_narrative(
+                msme_data=msme_data,
+                eligibility_score=eligibility_score,
+                band=band,
+                eligibility_label=label,
+                sub_scores=sub_scores,
+                sub_score_labels=sub_score_labels,
+                all_meta=all_meta,
+                rep_meta=rep_meta,
+                rev_meta=rev_meta,
+                computed_max_loan=computed_max,
+                asking_amount=asking_amount,
+                is_eligible=is_eligible,
+            )
+            summary = llm_res["executive_summary"]
+            breakdown = llm_res["score_breakdown_narrative"]
+            risk = llm_res["risk_summary"]
+            if llm_res.get("areas_of_improvement"):
+                areas_of_improvement = llm_res["areas_of_improvement"]
+            if llm_res.get("strengths"):
+                strengths = llm_res["strengths"]
+            narrative_src = llm_res.get("narrative_source", "llm")
+        except (LLMUnavailableError, LLMResponseParseError, Exception) as e:
+            logger.warning("LLM narrative generation failed; failing open to templates. Error: %s", e)
+            summary, breakdown, risk = _generate_narratives(
+                msme_data, eligibility_score, band, sub_scores, rep_meta, rev_meta, computed_max, asking_amount
+            )
+
+        # ── Step 9: Repayment Capacity ───────────────────────────────────────
+        disposable_inc = float(msme_data.get("disposable_income", 0.0))
+        repayment_capacity = disposable_inc * 0.5
 
         # ── Data completeness ─────────────────────────────────────────────────
         data_sources = []
@@ -858,6 +894,10 @@ class XAILoanService:
 
             sub_scores=sub_scores,
             sub_score_labels=sub_score_labels,
+
+            repayment_capacity=repayment_capacity,
+            repayment_capacity_label=_fmt_inr(repayment_capacity),
+            narrative_source=narrative_src,
 
             data_completeness_pct=round(min(completeness, 100), 1),
             data_sources_used=data_sources,

@@ -35,6 +35,13 @@ export interface MSME {
   constitution?: string
   status: MSMEStatus
   gst_registration_date?: string
+  epfo_active_employees?: number
+  pf_compliance_score?: number
+  avg_monthly_inflow?: number
+  avg_monthly_outflow?: number
+  disposable_income?: number
+  gstr_3b_delay_days?: number
+  behavioral_tag?: string
   created_at: string
   updated_at: string
 }

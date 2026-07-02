@@ -42,6 +42,15 @@ class MSMEBase(BaseModel):
     nic_description: Optional[str] = None
     incorporation_date: Optional[datetime] = None
     constitution: Optional[str] = None
+    
+    # Alternate Data Signals
+    epfo_active_employees: Optional[int] = 0
+    pf_compliance_score: Optional[float] = 0.0
+    avg_monthly_inflow: Optional[float] = 0.0
+    avg_monthly_outflow: Optional[float] = 0.0
+    disposable_income: Optional[float] = 0.0
+    gstr_3b_delay_days: Optional[int] = 0
+    behavioral_tag: Optional[str] = ""
 
 class MSMECreate(MSMEBase):
     pass
@@ -341,6 +350,11 @@ class XAILoanResponse(BaseModel):
     # Sub-scores (0-100 each)
     sub_scores: Dict[str, float]         # e.g. {"gst_compliance": 85, "repayment": 72, ...}
     sub_score_labels: Dict[str, str]     # human-readable labels for sub-scores
+
+    # Repayment Capacity (EPFO/Bank cash flow derived)
+    repayment_capacity: Optional[float] = None
+    repayment_capacity_label: Optional[str] = None
+    narrative_source: Optional[str] = "template"
 
     # Data Quality
     data_completeness_pct: float

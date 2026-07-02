@@ -73,7 +73,7 @@ async def get_loan_explanation(
     aa_data: List[Dict] = [_model_to_dict(a) for a in aa_rows]
 
     # ── 4. Run XAI engine ─────────────────────────────────────────────────────
-    explanation = xai_service.compute_loan_explanation(
+    explanation = await xai_service.compute_loan_explanation(
         msme_data=msme_dict,
         gst_data=gst_data,
         aa_data=aa_data,

@@ -13,9 +13,9 @@ import {
 import {
   ArrowLeft, Building2, MapPin, Calendar, Shield,
   TrendingUp, AlertTriangle, CheckCircle, XCircle,
-  CreditCard, Zap, RefreshCw, Target,
+  CreditCard, Zap, RefreshCw, Target, FileText
 } from 'lucide-react'
-import { fetchMSMEById, updateRecommendationStatus } from '../api/client'
+import { fetchMSMEById, updateRecommendationStatus, fetchLoanExplanationGet } from '../api/client'
 import type {
   FullMSMEProfile, GSTReturn, AAAccount, NeedPrediction,
   ProductRecommendation, MSMEStatus, RecStatus,
@@ -417,6 +417,12 @@ export function MSMEProfilePage() {
     retry: 1,
   })
 
+  const { data: eligibilityData } = useQuery({
+    queryKey: ['eligibility', id],
+    queryFn: () => fetchLoanExplanationGet(id!, 2500000),
+    enabled: !!id,
+  })
+
   if (isLoading) {
     return (
       <div className="page-container">
@@ -474,10 +480,21 @@ export function MSMEProfilePage() {
                     Trade name: {msme.trade_name}
                   </div>
                 )}
-                <div className="flex gap-sm" style={{ flexWrap: 'wrap' }}>
+                <div className="flex gap-sm" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
                   <span className={`badge ${STATUS_BADGE[msme.status]}`}>{msme.status}</span>
                   {msme.constitution && <span className="badge badge-muted">{msme.constitution}</span>}
                   {msme.nic_code && <span className="badge badge-info">NIC: {msme.nic_code}</span>}
+                  {msme.behavioral_tag && (
+                    <span className="badge" style={{
+                      background: msme.behavioral_tag === 'Disciplined Spender' ? 'rgba(16,185,129,0.15)' :
+                                  msme.behavioral_tag === 'High Cash Burn' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                      color: msme.behavioral_tag === 'Disciplined Spender' ? '#10b981' :
+                             msme.behavioral_tag === 'High Cash Burn' ? '#f87171' : '#f59e0b',
+                      fontWeight: 700
+                    }}>
+                      ⚡ {msme.behavioral_tag}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -487,12 +504,14 @@ export function MSMEProfilePage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
             {[
               { icon: <MapPin size={13} />, label: 'Location', value: [msme.city, msme.state].filter(Boolean).join(', ') || '—' },
               { icon: <Calendar size={13} />, label: 'Age', value: incYears ? `${incYears} years` : '—' },
-              { icon: <Building2 size={13} />, label: 'NIC Sector', value: msme.nic_description?.slice(0, 30) ?? '—' },
+              { icon: <Building2 size={13} />, label: 'NIC Sector', value: msme.nic_description?.slice(0, 35) ?? '—' },
               { icon: <Shield size={13} />, label: 'GST Reg.', value: msme.gst_registration_date ? new Date(msme.gst_registration_date).getFullYear().toString() : '—' },
+              { icon: <Zap size={13} />, label: 'EPFO Active Employees', value: msme.epfo_active_employees !== undefined ? `${msme.epfo_active_employees} employees` : '—' },
+              { icon: <RefreshCw size={13} />, label: 'PF Compliance Score', value: msme.pf_compliance_score !== undefined ? `${msme.pf_compliance_score}%` : '—' },
             ].map(({ icon, label, value }) => (
               <div key={label} style={{ background: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px' }}>
                 <div className="flex gap-xs items-center" style={{ color: 'var(--text-muted)', fontSize: 10, marginBottom: 4 }}>
@@ -534,28 +553,115 @@ export function MSMEProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Repayment Capacity & Alternate Cash Flow Analysis Card */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Repayment Capacity & Alternate Cash Flow Analysis</span>
+            </div>
+            <div className="card-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
+                {/* Left: Repayment Capacity Widget */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+                  <div style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.15)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ fontSize: 11, color: '#67e8f9', fontWeight: 600, textTransform: 'uppercase' }}>Disposable Income (Monthly)</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>
+                      {msme.disposable_income ? `₹${(msme.disposable_income / 1e5).toFixed(2)} Lakh` : '—'}
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ fontSize: 11, color: '#6ee7b7', fontWeight: 600, textTransform: 'uppercase' }}>Max EMI Capacity (50%)</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+                      {msme.disposable_income ? `₹${((msme.disposable_income * 0.5) / 1e5).toFixed(2)} Lakh` : '—'}/mo
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Bar chart of GST revenue vs AA cash outflows */}
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8, fontWeight: 600 }}>
+                    GST Revenue vs Cash Outflow vs Cash Inflow
+                  </div>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={[
+                      { name: 'Avg GST Rev', Amount: parseFloat((gst_returns.reduce((s, r) => s + r.total_revenue, 0) / (gst_returns.length || 1) / 1e5).toFixed(2)), fill: '#4F6EF7' },
+                      { name: 'Bank Inflow', Amount: parseFloat(((msme.avg_monthly_inflow ?? 0) / 1e5).toFixed(2)), fill: '#10B981' },
+                      { name: 'Bank Outflow', Amount: parseFloat(((msme.avg_monthly_outflow ?? 0) / 1e5).toFixed(2)), fill: '#EF4444' },
+                    ]} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip formatter={(v) => [`₹${v} L`, 'Amount']} />
+                      <Bar dataKey="Amount" radius={[4, 4, 0, 0]}>
+                        <Cell fill="#4F6EF7" />
+                        <Cell fill="#10B981" />
+                        <Cell fill="#EF4444" />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">AI Need Detection + XAI</span>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-              {latest_need_prediction?.model_version ?? '—'}
-            </span>
+        <div className="flex-col gap-lg">
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">AI Need Detection + XAI</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                {latest_need_prediction?.model_version ?? '—'}
+              </span>
+            </div>
+            <div className="card-body">
+              {latest_need_prediction ? (
+                <SHAPPanel prediction={latest_need_prediction} />
+              ) : (
+                <div className="empty-state" style={{ padding: '32px 16px' }}>
+                  <Zap size={28} />
+                  <p>No need prediction yet.</p>
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>
+                    <Zap size={13} /> Run Prediction
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="card-body">
-            {latest_need_prediction ? (
-              <SHAPPanel prediction={latest_need_prediction} />
-            ) : (
-              <div className="empty-state" style={{ padding: '32px 16px' }}>
-                <Zap size={28} />
-                <p>No need prediction yet.</p>
-                <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>
-                  <Zap size={13} /> Run Prediction
-                </button>
+
+          {/* AI Underwriter Memo Card */}
+          {eligibilityData && (
+            <div className="card">
+              <div className="card-header flex justify-between items-center">
+                <span className="card-title flex gap-xs items-center">
+                  <FileText size={16} color="#6366f1" /> AI Underwriter Memo
+                </span>
+                {eligibilityData.narrative_source && (
+                  <span style={{
+                    padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                    background: eligibilityData.narrative_source.startsWith('llm') || eligibilityData.narrative_source.includes('gemini') ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)',
+                    color: eligibilityData.narrative_source.startsWith('llm') || eligibilityData.narrative_source.includes('gemini') ? '#10b981' : '#6366f1'
+                  }}>
+                    {eligibilityData.narrative_source.toUpperCase().replace('_', ' ')}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
+              <div className="card-body">
+                <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}
+                  dangerouslySetInnerHTML={{ __html: eligibilityData.executive_summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+                />
+                {eligibilityData.risk_summary && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6, fontWeight: 600 }}>
+                      Risk Assessment
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}
+                      dangerouslySetInnerHTML={{ __html: eligibilityData.risk_summary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
